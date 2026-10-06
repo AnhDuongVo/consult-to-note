@@ -1,0 +1,65 @@
+# NeMo Agent Toolkit evaluation + profiling on ACI-Bench.
+#   python scripts/build_nat_dataset.py --split valid --n 10
+#   nat eval --config_file configs/eval.yml
+# Results: .tmp/nat/consult_to_note/ (workflow_output.json, per-evaluator scores, profiler reports)
+
+llms:
+  reasoning_llm:
+    _type: nim
+    model_name: nvidia/nemotron-3-super-120b-a12b
+    temperature: 0.2
+    max_tokens: 4096
+    chat_template_kwargs:
+      enable_thinking: false
+  fast_llm:
+    _type: nim
+    model_name: nvidia/nemotron-3.5-lightning-30b-a3b
+    temperature: 0.0
+    max_tokens: 4096
+    chat_template_kwargs:
+      enable_thinking: false
+  judge_llm:
+    _type: nim
+    model_name: nvidia/nemotron-3-super-120b-a12b
+    temperature: 0.0
+    max_tokens: 1024
+    chat_template_kwargs:
+      enable_thinking: false
+
+workflow:
+  _type: consult_to_note
+  llm_name: reasoning_llm
+  fast_llm_name: fast_llm
+  max_revisions: 1
+  output: markdown
+
+eval:
+  general:
+    max_concurrency: 2
+    output_dir: .tmp/nat/consult_to_note
+    dataset:
+      _type: json
+      file_path: data/nat_aci_valid.json
+    profiler:
+      token_uniqueness_forecast: true
+      workflow_runtime_forecast: true
+      compute_llm_metrics: true
+      csv_exclude_io_text: true
+      bottleneck_analysis:
+        enable_nested_stack: true
+  evaluators:
+    clinical_note_judge:
+      _type: tunable_rag_evaluator
+      llm_name: judge_llm
+      default_scoring: false
+      judge_llm_prompt: >
+        You are an experienced physician grading an AI-drafted clinical note against a reference note written
+        by a clinician. The question is the consultation transcript, the expected answer is the reference note,
+        and the generated answer is the draft.
+
+        Rules:
+        - The score must be a float between 0.0 and 1.0.
+        - Penalise heavily any fact in the draft that is not in the transcript (hallucination).
+        - Penalise missing clinically important facts (diagnoses, medication changes, follow-up, abnormal results).
+        - Ignore style, headings, ordering and the citation markers like [U3].
+        - The reasoning string must be one or two sentences naming the most important difference.

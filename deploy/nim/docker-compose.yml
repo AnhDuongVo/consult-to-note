@@ -1,0 +1,55 @@
+# Self-hosted NVIDIA NIM: a Nemotron LLM and the Parakeet streaming ASR model on one GPU machine.
+#
+#   export NGC_API_KEY=...            # from https://org.ngc.nvidia.com/setup/api-key (same as build.nvidia.com key works for many NIMs)
+#   echo "$NGC_API_KEY" | docker login nvcr.io --username '$oauthtoken' --password-stdin
+#   mkdir -p ~/.cache/nim
+#   docker compose -f deploy/nim/docker-compose.yml up -d nemotron      # LLM only
+#   docker compose -f deploy/nim/docker-compose.yml up -d               # LLM + ASR (needs enough GPU memory, or 2 GPUs)
+#
+# Health:  curl localhost:8000/v1/health/ready   (LLM)   |   curl localhost:9000/v1/health/ready   (ASR)
+# Then point the apps at it:
+#   NIM_BASE_URL=http://localhost:8000/v1
+#   C2N_ASR_SERVER=localhost:50051  C2N_ASR_USE_SSL=false  C2N_ASR_FUNCTION_ID=
+#
+# Image names and tags change: check the NGC catalog (catalog.ngc.nvidia.com, filter "NIM") before running.
+
+services:
+  nemotron:
+    # Nemotron 3 Nano 30B-A3B NIM. Swap for another LLM NIM image to compare models.
+    image: nvcr.io/nim/nvidia/nemotron-3-nano:latest
+    environment:
+      - NGC_API_KEY=${NGC_API_KEY}
+      # Optional: pin an engine profile (precision / tensor parallelism). List them with:
+      #   docker run --rm --gpus=all -e NGC_API_KEY nvcr.io/nim/nvidia/nemotron-3-nano:latest list-model-profiles
+      # - NIM_MODEL_PROFILE=<profile-id>
+    volumes:
+      - ${HOME}/.cache/nim:/opt/nim/.cache
+    ports:
+      - "8000:8000"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ["0"]
+              capabilities: [gpu]
+    shm_size: 16gb
+
+  parakeet:
+    image: nvcr.io/nim/nvidia/parakeet-1-1b-ctc-en-us:latest
+    environment:
+      - NGC_API_KEY=${NGC_API_KEY}
+      - NIM_HTTP_API_PORT=9000
+      - NIM_GRPC_API_PORT=50051
+      - NIM_TAGS_SELECTOR=mode=str   # streaming mode
+    ports:
+      - "9000:9000"
+      - "50051:50051"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ["0"]   # change to "1" on a two-GPU machine
+              capabilities: [gpu]
+    shm_size: 8gb

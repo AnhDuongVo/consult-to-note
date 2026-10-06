@@ -1,0 +1,49 @@
+# NeMo Guardrails configuration.
+#
+# The model below is a default: at runtime guard.py replaces it with C2N_MODEL_FAST and, for a
+# self-hosted endpoint, NIM_BASE_URL, so the rails use the same endpoint as the pipeline.
+#
+# Input rail : mask personal identifiers (names, phone numbers, emails, ...) in the transcript with
+#              Microsoft Presidio BEFORE any text is sent to a hosted model (data minimisation, GDPR art. 5).
+# Output rail: a self-check on the drafted note (no advice that bypasses the physician, nothing off-topic),
+#              plus masking of identifiers that slipped into the note.
+#
+# Requires: pip install "nemoguardrails[sdd]" && python -m spacy download en_core_web_lg
+
+models:
+  - type: main
+    engine: nvidia_ai_endpoints
+    model: nvidia/nemotron-3.5-lightning-30b-a3b
+    parameters:
+      # The self-check parser reads the first words of the answer: no reasoning trace wanted.
+      chat_template_kwargs:
+        enable_thinking: false
+
+rails:
+  config:
+    sensitive_data_detection:
+      input:
+        score_threshold: 0.6
+        entities:
+          - PERSON
+          - PHONE_NUMBER
+          - EMAIL_ADDRESS
+          - LOCATION
+          - URL
+          - MEDICAL_LICENSE
+          - IBAN_CODE
+          - CREDIT_CARD
+          - US_SSN
+      output:
+        score_threshold: 0.6
+        entities:
+          - PERSON
+          - PHONE_NUMBER
+          - EMAIL_ADDRESS
+  input:
+    flows:
+      - mask sensitive data on input
+  output:
+    flows:
+      - mask sensitive data on output
+      - self check output

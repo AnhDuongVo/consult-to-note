@@ -1,0 +1,30 @@
+# Benchmark targets for `c2n bench deploy/targets.yml`. Copy this file to targets.yml and edit.
+# Every target is an OpenAI-compatible endpoint. All three serve Nemotron 3 Nano 30B-A3B so the comparison
+# is about serving, not about the model. (Precision can still differ: NIM picks an optimised profile.)
+
+targets:
+  - name: hosted-nim
+    base_url: https://integrate.api.nvidia.com/v1
+    model: nvidia/nemotron-3-nano-30b-a3b
+    api_key_env: NVIDIA_API_KEY
+
+  # docker compose -f deploy/nim/docker-compose.yml up nemotron
+  - name: local-nim
+    base_url: http://localhost:8000/v1
+    model: nvidia/nemotron-3-nano-30b-a3b   # check with: curl localhost:8000/v1/models
+    gpu_hourly_usd: 2.50   # what you pay for ONE GPU per hour (cloud price), for cost per 1k requests
+    gpus: 1
+
+  # bash deploy/dynamo/aggregated.sh   (frontend on port 8001)
+  - name: dynamo-vllm
+    base_url: http://localhost:8001/v1
+    model: nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-FP8
+    gpu_hourly_usd: 2.50
+    gpus: 1
+
+concurrency: [1, 4, 8, 16]
+requests_per_level: 32
+workload: note_update        # note_update (live path) or full_note (batch path)
+max_tokens: 256
+data_csv: data/aci-bench/valid.csv   # real dialogue lengths; falls back to a bundled sample
+warmup: 2

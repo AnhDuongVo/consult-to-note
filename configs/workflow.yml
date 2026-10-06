@@ -1,0 +1,34 @@
+# NeMo Agent Toolkit workflow config.
+#   nat run   --config_file configs/workflow.yml --input "$(cat src/consult_to_note/samples/diabetes_followup.txt)"
+#   nat serve --config_file configs/workflow.yml        # REST API on :8000
+#   nat mcp serve --config_file configs/workflow.yml    # MCP server on :9901/mcp
+#
+# For a self-hosted NIM, add `base_url: http://localhost:8000/v1` to an LLM below.
+
+llms:
+  reasoning_llm:
+    _type: nim
+    model_name: nvidia/nemotron-3-super-120b-a12b
+    temperature: 0.2
+    max_tokens: 4096
+    chat_template_kwargs:
+      enable_thinking: false
+  fast_llm:
+    _type: nim
+    model_name: nvidia/nemotron-3.5-lightning-30b-a3b
+    temperature: 0.0
+    max_tokens: 4096
+    chat_template_kwargs:
+      enable_thinking: false
+
+functions:
+  ground_note_sentence:
+    _type: ground_note_sentence
+
+workflow:
+  _type: consult_to_note
+  llm_name: reasoning_llm
+  fast_llm_name: fast_llm
+  max_revisions: 1
+  include_trials: false
+  output: markdown

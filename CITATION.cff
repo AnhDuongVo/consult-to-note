@@ -1,0 +1,9 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "consult-to-note: grounded clinical notes from consultations"
+authors:
+  - family-names: "Vo"
+    given-names: "Anh Duong"
+license: Apache-2.0
+version: 0.2.0
+date-released: "2026-10-06"

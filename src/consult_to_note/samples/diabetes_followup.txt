@@ -1,0 +1,29 @@
+[doctor] Good morning, Mr. Keller. Have a seat. What brings you in today?
+[patient] Morning. Mostly my diabetes check-up, but I've also been really tired for the last three weeks or so.
+[doctor] Tired in what way? Sleepy during the day, or more exhausted after activity?
+[patient] Both, I guess. And I'm thirsty all the time. I'm getting up two or three times at night to pee.
+[doctor] Any blurred vision, weight change, or numbness in your feet?
+[patient] No vision problems. I think I've lost maybe two kilos without trying. No numbness.
+[doctor] Any chest pain or shortness of breath when you walk?
+[patient] No, nothing like that.
+[doctor] Okay. Remind me what you're taking at the moment.
+[patient] Metformin, 1000 milligrams twice a day. And ramipril 5 milligrams in the morning for blood pressure.
+[doctor] Are you taking the metformin regularly?
+[patient] Mostly, maybe I miss the evening one once or twice a week.
+[doctor] Any allergies to medications?
+[patient] Penicillin. I got a rash from it as a kid.
+[doctor] Do you smoke?
+[patient] I stopped five years ago. I have a glass of wine at the weekend, that's it.
+[doctor] Good. Your blood pressure today is 148 over 92, and your weight is 94 kilos. Your HbA1c from last week came back at 8.4 percent, up from 7.6 in March.
+[patient] That's not good, is it?
+[doctor] It tells us your sugar has been higher over the last few months, which fits with the thirst and tiredness. On examination your feet look fine, pulses are normal and sensation is intact.
+[doctor] So my assessment is type 2 diabetes that is not well controlled at the moment, and blood pressure that is above target.
+[doctor] I'd like to add a second medication, empagliflozin 10 milligrams once daily. It lowers sugar and also protects the heart and kidneys. You may need to pee a bit more, and keep the genital area clean because of a small infection risk.
+[patient] Okay. Do I keep the metformin?
+[doctor] Yes, keep the metformin at the same dose, and try a pill box so you don't miss the evening dose.
+[doctor] For the blood pressure, let's increase ramipril to 10 milligrams in the morning.
+[doctor] I'll order kidney function, potassium and a urine albumin test in two weeks, because of the medication changes.
+[patient] Fine. Should I change anything with food?
+[doctor] I'll refer you to our diabetes nurse for nutrition advice. And please call us on 044 555 12 34 if you feel dizzy or unwell.
+[doctor] Let's see each other again in three months with a new HbA1c.
+[patient] Thank you, doctor.
