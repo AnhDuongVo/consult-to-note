@@ -9,7 +9,7 @@ description = "Grounded clinical notes from doctor-patient conversations: every 
 readme = "README.md"
 requires-python = ">=3.11,<3.14"
 license = { text = "Apache-2.0" }
-authors = [{ name = "Anh Duong Vo" }]
+authors = [{ name = "Maria (Anh Duong Vo)" }]
 keywords = ["clinical-documentation", "ambient-scribe", "llm", "agents", "fhir", "nemotron", "nim"]
 classifiers = [
   "Programming Language :: Python :: 3",
