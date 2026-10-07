@@ -32,7 +32,7 @@ flowchart LR
   repairs. Reasoning is switched off where it only adds latency.
 - **Structured output everywhere.** Extraction, notes and verdicts are generated against JSON schemas
   (`guided_json`), validated with Pydantic, and retried once with the schema in the prompt.
-- **A human signs.** The LangGraph run pauses before finalising; the FHIR Composition is `preliminary` until a
+- **Clinician approval.** The LangGraph run pauses before finalising; the FHIR Composition is `preliminary` until a
   clinician approves it.
 
 ## Quick start
@@ -213,6 +213,8 @@ deploy/                  NIM docker compose, Dynamo launch scripts, benchmark ta
 scripts/                 data download, dataset builder
 tests/                   offline tests
 ```
+
+> **Design note.** The small OpenAI-compatible client (`llm.py`) and settings (`config.py`) are intentionally vendored rather than shared as a package, so each example is self-contained and runs with a single `pip install`. The same module appears in the sibling projects by design.
 
 ## Development
 
