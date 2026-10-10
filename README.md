@@ -65,9 +65,7 @@ flowchart LR
     H -->|approve| Final[Composition: final]
 ```
 
-## Demo
-
-![consult-to-note demo](docs/demo.gif)
+## Demo details
 
 Two consultations in the interactive demo. For each, the note is generated with its numbers checked against the transcript lines it cites; then an error is planted (250 mg instead of 25 mg, 25 units instead of 2.5 units) and the check flags the sentence. The video is on [anhduongvo.github.io](https://anhduongvo.github.io/projects/clinical-agentic-ai/).
 
