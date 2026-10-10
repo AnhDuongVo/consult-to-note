@@ -4,7 +4,7 @@ Two stages, cheapest first:
 1. Lexical check (no LLM): numbers must match, content words must overlap, and negation and
    laterality (left/right) must agree. Clear passes stop here, which keeps the check fast and auditable.
 2. LLM judge (fast model) for everything else: paraphrases ("dyspnoea" for "short of breath"),
-   negation or side mismatches, number mismatches. Without a judge those sentences are flagged.
+   ambiguous lexical matches. Numerical, unit, negation and side failures remain flagged even with a judge.
 """
 
 from __future__ import annotations
@@ -224,6 +224,14 @@ def risk_flags(sentence: str, evidence_text: str) -> list[str]:
     return flags
 
 
+def quantities(text: str) -> set[tuple[str, str]]:
+    """Conservative dose/unit pairs; no implicit unit conversions."""
+    aliases = {"milligrams": "mg", "micrograms": "mcg", "grams": "g", "units": "unit", "iu": "unit"}
+    normalized = " ".join(aliases.get(t, NUMBER_WORDS.get(t, t)) for t in _tokens(text))
+    pairs = re.findall(r"(\d+(?:\.\d+)?)\s*(mg|mcg|g|kg|ml|l|unit)\b", normalized)
+    return {(f"{float(v):g}", u) for v, u in pairs}
+
+
 def lexical_score(sentence: str, evidence_text: str) -> tuple[float, str]:
     """Return (score in [0, 1], reason). A number missing from the evidence scores 0."""
     missing_numbers = _numbers(sentence) - _numbers(evidence_text)
@@ -251,7 +259,7 @@ async def check_note(
 
     for section, idx, sent in note.sentences():
         cited = [utt[e] for e in sent.evidence if e in utt]
-        if not cited:
+        if not cited or any(e not in utt for e in sent.evidence):
             checks.append(
                 GroundingCheck(
                     section=section,
@@ -260,17 +268,23 @@ async def check_note(
                     supported=False,
                     score=0.0,
                     method="no_evidence",
-                    reason="no valid utterance cited",
+                    reason="missing or invalid utterance citation",
                 )
             )
             continue
         evidence_text = " ".join(u.text for u in cited)
         score, reason = lexical_score(sent.text, evidence_text)
         flags = risk_flags(sent.text, evidence_text)
+        missing_numbers = _numbers(sent.text) - _numbers(evidence_text)
+        if missing_numbers:
+            flags.append(f"numbers not in evidence: {sorted(missing_numbers)}")
+        missing_quantities = quantities(sent.text) - quantities(evidence_text)
+        if missing_quantities:
+            flags.append(f"quantity/unit not in evidence: {sorted(missing_quantities)}")
         if flags:
             reason = f"{reason}; {'; '.join(flags)}"
         clear_pass = score >= pass_threshold and not flags
-        if clear_pass or llm is None:
+        if clear_pass or llm is None or flags:
             # Without a judge: pass only clear cases, everything else is flagged for the clinician.
             supported = clear_pass or (score >= (pass_threshold + fail_threshold) / 2 and not flags)
             checks.append(
@@ -285,7 +299,7 @@ async def check_note(
                 )
             )
         else:
-            # Paraphrases, negations, laterality and number mismatches all go to the judge.
+            # Only ambiguous lexical matches without a deterministic failure go to the judge.
             checks.append(
                 GroundingCheck(
                     section=section,

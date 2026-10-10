@@ -1,10 +1,53 @@
 # consult-to-note
 
+## What this project demonstrates
+
+Demonstrates evidence-linked SOAP drafting, deterministic failure flags and optional clinician review. The NAT workflow returns a preliminary draft.
+
+## Watch the demo
+
+![Demo](docs/demo.gif)
+
+[Portfolio videos](https://anhduongvo.github.io/projects/clinical-agentic-ai/). Clinical recordings use the separate simplified interactive demo.
+
+## Try it offline
+
+Python 3.11–3.13. In a fresh virtual environment, from this repository:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install -e ".[dev]"
+pytest -q
+```
+
+## Run with NVIDIA or another configured backend
+
+Model generation needs `NVIDIA_API_KEY`, `NIM_BASE_URL`, and the configured `C2N_MODEL_FAST` / `C2N_MODEL_REASONING`. Use `c2n models` to select IDs available to your endpoint. Riva, Guardrails and NAT are optional integrations. `c2n demo --no-trials` is a live generation command.
+
+Model IDs in `.env.example` and NAT configs are examples, not a current availability guarantee. Check your endpoint before running; the validation below does not include live model execution.
+
+## What is verified
+
+Numerical values, selected dose/unit pairs, all cited utterance IDs, and conservative negation/laterality signals. Lexical passes and model judges do not prove clinical correctness.
+
+| Validation layer | Status |
+|---|---|
+| Unit/regression tests | Executed locally on Python 3.12; see `docs/validation.md` |
+| Mocked/simulated integrations | Executed locally; scope documented in tests |
+| Live hosted endpoints | Not executed; access and appropriate inputs required |
+| Self-hosted GPU endpoints | Not executed |
+| Domain-specific validation | Not completed; synthetic examples only |
+
+See [validation details](docs/validation.md). The architecture and detailed workflows follow.
+
+## Architecture and detailed workflows
+
 **Grounded clinical notes from doctor-patient conversations.** A consultation goes in; a SOAP note comes out
 in which every sentence cites the transcript lines it came from. Code checks what code can check (numbers,
-negation, left and right), a model judges the rest, unsupported sentences are repaired once, and a clinician
-approves before the note is exported as a FHIR R4 document. The same pipeline also runs live, updating the
-note while the consultation is still going within a one-second latency budget.
+negation, left and right), a model judges the rest, unsupported sentences are repaired once, and an optional explicit clinician review workflow
+records approval; the default route exports a preliminary draft as a FHIR R4 document. The same pipeline also runs live, updating the
+note while the consultation is still going with a configurable latency target; no live latency benchmark is claimed here.
 
 Built on open models served through OpenAI-compatible endpoints (NVIDIA NIM with Nemotron by default), so
 the same code runs against a hosted API during development and on a hospital's own GPUs in production.
@@ -18,7 +61,7 @@ flowchart LR
     G -->|unsupported| R[Revise once] --> G
     G -->|supported| S[Safety rail]
     S --> F[FHIR bundle]
-    F --> H{{Clinician review}}
+    F --> H{{Optional explicit clinician review}}
     H -->|approve| Final[Composition: final]
 ```
 
@@ -33,7 +76,7 @@ Two consultations in the interactive demo. For each, the note is generated with 
 - **Citations at generation time, not afterwards.** The model points to its evidence (`[U12, U14]`) while it
   writes, so verification is a cheap check of a pointer rather than a search for a source.
 - **Code before models.** Numbers, units, negation and laterality are compared deterministically. Only
-  sentences that code cannot clearly pass go to an LLM judge.
+  ambiguous lexical matches without deterministic failures go to an LLM judge. Hard failures stay flagged.
 - **Two model tiers.** A fast model extracts structured facts and judges; a reasoning model drafts and
   repairs. Reasoning is switched off where it only adds latency.
 - **Structured output everywhere.** Extraction, notes and verdicts are generated against JSON schemas

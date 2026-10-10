@@ -1,0 +1,13 @@
+{
+  "dataset": "Bundled synthetic knee consultation; scripted note and permissive judge",
+  "notes": 2,
+  "sentences_per_note": 6,
+  "good_note_screen_pass_rate": 1.0,
+  "bad_note_flagged": 1,
+  "planted_dose_failure_detected": true,
+  "median_check_pair_ms": 0.78,
+  "timing_repetitions": 30,
+  "model_calls": "scripted; no live model",
+  "hardware": "arm64 CPU, Darwin, Python 3.12.14",
+  "limits": "Single synthetic consultation; not ACI-Bench or clinical validation. Matching numbers can still belong to the wrong medication. Semantic errors remain possible."
+}

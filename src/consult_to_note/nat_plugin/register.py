@@ -48,7 +48,7 @@ async def consult_to_note(config: ConsultToNoteConfig, builder: Builder):
     llm = LangChainAdapter(reasoning, fast)
 
     async def _run(transcript: str) -> str:
-        """Draft a grounded SOAP note from a doctor-patient consultation transcript ([doctor]/[patient] lines)."""
+        """Generate a preliminary, reviewable SOAP draft; this invocation does not complete clinician approval."""
         result = await run_pipeline(
             Transcript.from_text(transcript, source="nat"),
             llm,
@@ -73,7 +73,7 @@ async def consult_to_note(config: ConsultToNoteConfig, builder: Builder):
             rtype = entry["resource"]["resourceType"]
             counts[rtype] = counts.get(rtype, 0) + 1
         footer = (
-            f"\n---\nGrounding: {len(g.checks) - len(g.unsupported)}/{len(g.checks)} sentences supported; "
+            f"\n---\nPreliminary draft: clinician review required.\nGrounding: {len(g.checks) - len(g.unsupported)}/{len(g.checks)} sentences supported; "
             f"revisions: {result.revisions}; FHIR: {counts}"
         )
         return result.note.to_markdown(flags=result.flagged()) + footer
@@ -87,11 +87,17 @@ class GroundSentenceConfig(FunctionBaseConfig, name="ground_note_sentence"):
 
 @register_function(config_type=GroundSentenceConfig)
 async def ground_note_sentence(config: GroundSentenceConfig, builder: Builder):
-    from ..grounding import lexical_score
+    from ..grounding import lexical_score, quantities, risk_flags
 
     async def _check(sentence: str, evidence: str) -> str:
         """Check whether a clinical note sentence is supported by the given transcript evidence text."""
         score, reason = lexical_score(sentence, evidence)
-        return f"score={score:.2f} ({reason})"
+        flags = risk_flags(sentence, evidence)
+        if quantities(sentence) - quantities(evidence):
+            flags.append("quantity/unit mismatch")
+        if flags:
+            score = 0.0
+            reason += "; " + "; ".join(flags)
+        return f"score={score:.2f} ({reason}); lexical screening only, clinician review required"
 
     yield FunctionInfo.from_fn(_check, description=_check.__doc__)
