@@ -1,5 +1,13 @@
 # consult-to-note
 
+## Motivation
+
+Turning a consultation into a structured clinical note requires preserving details such as doses, symptoms and follow-up plans. A fluent draft can still omit evidence or introduce an incorrect value, making it difficult to review.
+
+## What the program does
+
+consult-to-note turns a consultation transcript, or speech processed through its optional speech integration, into a structured SOAP note. Draft sentences link back to transcript evidence. The pipeline screens selected numerical, dose, citation and consistency errors, supports clinician review, and exports a preliminary FHIR document. Its aim is to make drafting and review more traceable; it does not replace clinical judgment.
+
 ## What this project demonstrates
 
 Demonstrates evidence-linked SOAP drafting, deterministic failure flags and optional clinician review. The NAT workflow returns a preliminary draft.
