@@ -16,7 +16,7 @@ Demonstrates evidence-linked SOAP drafting, deterministic failure flags and opti
 
 ![Demo](docs/demo.gif)
 
-[Portfolio videos](https://anhduongvo.github.io/projects/clinical-agentic-ai/). Clinical recordings use the separate simplified interactive demo.
+[Portfolio videos](https://anhduongvo.github.io/projects/clinical-agentic-ai/). This SOAP recording uses the full project pipeline with explicitly labeled scripted model responses.
 
 ## Try it offline
 
@@ -75,7 +75,16 @@ flowchart LR
 
 ## Demo details
 
-Two consultations in the interactive demo. For each, the note is generated with its numbers checked against the transcript lines it cites; then an error is planted (250 mg instead of 25 mg, 25 units instead of 2.5 units) and the check flags the sentence. The video is on [anhduongvo.github.io](https://anhduongvo.github.io/projects/clinical-agentic-ai/).
+The recording shows the **actual consult-to-note pipeline** in `examples/soap_workflow.py`: the consultation transcript is the input, and a source-linked note with **Subjective, Objective, Assessment and Plan** is the output. It runs the draft/check path, opens the evidence findings, then runs with automatic revision to correct a deliberately wrong dose from 800 mg to the source’s 400 mg. The FHIR document stays preliminary.
+
+The recorded run uses a synthetic consultation and **scripted extraction, drafting and judging responses**. It demonstrates software control flow and deterministic checks, not live model generation or clinical validation. This replaces the earlier selected-number illustration.
+
+```bash
+pip install -e ".[demo]"
+streamlit run examples/soap_workflow.py --theme.base light
+```
+
+The offline backend only supports the bundled consultation. To generate a new draft from editable synthetic text, select **Configured model endpoint · live** after configuring the local `.env` as described below. Live endpoint execution has not been validated by this recording. The UI exposes the pipeline without clinician approval, so exports remain preliminary.
 
 ## Why this design
 

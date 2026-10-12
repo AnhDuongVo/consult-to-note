@@ -32,6 +32,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+demo = ["streamlit>=1.40"]
 # Speech recognition with Parakeet through Riva (hosted endpoint or self-hosted NIM)
 asr = ["nvidia-riva-client>=2.17"]
 mic = ["nvidia-riva-client>=2.17", "pyaudio>=0.2.14"]

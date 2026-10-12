@@ -33,3 +33,7 @@ The GitHub workflows have been added or retained, but their remote execution has
 | Live ACI-Bench / latency benchmark | Not run |
 
 [Machine-readable results](offline-evaluation.json). This is a checker microbenchmark on one fixture, not a clinical evaluation or model-generation latency result. It does not test wrong medication/value associations exhaustively.
+
+## SOAP interface — 12 October 2026
+
+With the optional Streamlit demo dependency installed, 27 tests passed on Python 3.12, including an AppTest run of the actual SOAP pipeline: all four sections appear, the scripted 800 mg dose is flagged, one revision changes it to 400 mg, FHIR remains preliminary, and switching backend hides stale output. The UI test is skipped when Streamlit is absent. Install `.[demo,dev]` to include it. The new example and test pass Ruff lint and formatting. This is synthetic, scripted workflow validation; no live model endpoint was called.
