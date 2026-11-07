@@ -29,9 +29,9 @@ python -m pip install -e ".[dev]"
 pytest -q
 ```
 
-## Run with NVIDIA or another configured backend
+## Run with a configured model backend
 
-Model generation needs `NVIDIA_API_KEY`, `NIM_BASE_URL`, and the configured `C2N_MODEL_FAST` / `C2N_MODEL_REASONING`. Use `c2n models` to select IDs available to your endpoint. Riva, Guardrails and NAT are optional integrations. `c2n demo --no-trials` is a live generation command.
+Model generation needs `NVIDIA_API_KEY`, `NIM_BASE_URL`, and the configured `C2N_MODEL_FAST` / `C2N_MODEL_REASONING`. Use `c2n models` to select IDs available to your endpoint. Speech recognition, guardrails and the agent toolkit are optional integrations. `c2n demo --no-trials` is a live generation command.
 
 Model IDs in `.env.example` and NAT configs are examples, not a current availability guarantee. Check your endpoint before running; the validation below does not include live model execution.
 
@@ -57,12 +57,12 @@ negation, left and right), a model judges the rest, unsupported sentences are re
 records approval; the default route exports a preliminary draft as a FHIR R4 document. The same pipeline also runs live, updating the
 note while the consultation is still going with a configurable latency target; no live latency benchmark is claimed here.
 
-Built on open models served through OpenAI-compatible endpoints (NVIDIA NIM with Nemotron by default), so
+Built on open-weight models served through OpenAI-compatible endpoints, so
 the same code runs against a hosted API during development and on a hospital's own GPUs in production.
 
 ```mermaid
 flowchart LR
-    A[Audio] -->|Parakeet ASR| T[Transcript<br/>U1..Un]
+    A[Audio] -->|ASR| T[Transcript<br/>U1..Un]
     T -->|optional PHI masking| X[Extract<br/>fast model, JSON schema]
     X --> D[Draft SOAP note<br/>reasoning model, citation per sentence]
     D --> G{Ground<br/>code checks + judge}
@@ -106,7 +106,7 @@ No GPU needed. Python 3.11 to 3.13.
 ```bash
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
-cp .env.example .env            # add an API key, e.g. from https://build.nvidia.com
+cp .env.example .env            # add the API key for your endpoint
 c2n models                      # list the model IDs your key can use
 c2n demo --no-trials            # synthetic diabetes follow-up, end to end
 pytest                          # offline tests: scripted model responses, mocked HTTP
@@ -128,14 +128,14 @@ c2n note my_consult.txt --no-review --deidentify --safety --trials --trial-locat
 | --- | --- | --- |
 | Note pipeline | Extract, draft with citations, ground, revise, safety check, FHIR, review | `agent/graph.py` |
 | Grounding | Lexical support with number, unit, negation and laterality checks; LLM judge for the rest | `grounding.py` |
-| Speech | Parakeet ASR through Riva: chunking, word boosting for drug names, diarisation or per-speaker channels | `asr.py` |
-| Privacy | PHI masking on input (NeMo Guardrails with Presidio), output self-check | `guard.py`, `guardrails_config/` |
+| Speech | Streaming speech recognition: chunking, word boosting for drug names, diarisation or per-speaker channels | `asr.py` |
+| Privacy | PHI masking on input (guardrails with Presidio), output self-check | `guard.py`, `guardrails_config/` |
 | Interoperability | FHIR R4 document bundle: Composition with LOINC section codes, Patient, Practitioner, Conditions, medications, observations, allergies | `fhir.py` |
 | Trials | Optional pre-screen against recruiting studies on ClinicalTrials.gov | `trials.py` |
 | Evaluation | ACI-Bench: ROUGE, support rate, judged omissions and hallucinations, latency and tokens | `evaluation.py` |
 | Live mode | Note updates during the consultation within a latency budget | `realtime/` |
-| Serving benchmarks | Hosted vs self-hosted NIM vs Dynamo: TTFT, latency percentiles, throughput, cost | `realtime/bench/`, `deploy/` |
-| Agent tooling | NeMo Agent Toolkit plugin: `nat run`, `nat eval` with profiler, `nat serve`, `nat mcp serve` | `nat_plugin/`, `configs/` |
+| Serving benchmarks | Hosted vs self-hosted vs distributed serving: TTFT, latency percentiles, throughput, cost | `realtime/bench/`, `deploy/` |
+| Agent tooling | Agent-toolkit plugin: `nat run`, `nat eval` with profiler, `nat serve`, `nat mcp serve` | `nat_plugin/`, `configs/` |
 
 ## Speech to text
 
@@ -148,7 +148,7 @@ c2n note runs/transcript.json
 
 Input is 16-bit PCM WAV, ideally mono 16 kHz; long files are split into 25-second chunks. With one mixed
 recording the code uses diarisation when the endpoint returns speaker tags and otherwise asks the fast model
-to label doctor and patient. For German or French, point `C2N_ASR_FUNCTION_ID` at the multilingual Parakeet
+to label doctor and patient. For German or French, point `C2N_ASR_FUNCTION_ID` at a multilingual ASR
 model and set `C2N_ASR_LANGUAGE` (see `.env.example`).
 
 Real audio for testing: PriMock57, 57 mock GP consultations with separate doctor and patient channels
@@ -190,11 +190,11 @@ The same model can be served three ways; `c2n bench` measures them with realisti
 ACI-Bench dialogues.
 
 ```bash
-# NIM container on your own GPU (needs an NGC key, Docker and the NVIDIA Container Toolkit)
+# model container on your own GPU (needs Docker and GPU container support)
 docker compose -f deploy/nim/docker-compose.yml up -d nemotron
 curl localhost:8000/v1/models
 
-# NVIDIA Dynamo, aggregated (one GPU) or disaggregated prefill and decode (two GPUs)
+# distributed serving, aggregated (one GPU) or disaggregated prefill and decode (two GPUs)
 bash deploy/dynamo/aggregated.sh
 bash deploy/dynamo/disaggregated.sh
 
@@ -202,7 +202,7 @@ bash deploy/dynamo/disaggregated.sh
 cp deploy/targets.example.yml deploy/targets.yml   # URLs, model names, GPU price per hour
 c2n bench deploy/targets.yml
 c2n plot runs/bench/<timestamp>/summary.json       # TTFT p95, end-to-end p95, throughput
-c2n aiperf --url http://localhost:8000             # equivalent commands for NVIDIA AIPerf
+c2n aiperf --url http://localhost:8000             # equivalent commands for AIPerf
 ```
 
 Reported per target and concurrency: TTFT, inter-token latency (when the server reports usage), end-to-end
@@ -227,7 +227,7 @@ c2n eval --split valid --n 10
 Useful ablations: repair loop on and off (`--max-revisions 0`), drafting model swap, reasoning on and off
 (`C2N_THINKING=true`).
 
-With NeMo Agent Toolkit, which adds a profiler with per-step latency, token usage and bottleneck analysis:
+With the optional agent toolkit, which adds a profiler with per-step latency, token usage and bottleneck analysis:
 
 ```bash
 pip install -e ".[nat]"
@@ -254,7 +254,7 @@ currently requires Python 3.11 or 3.12. This is data minimisation, not a complet
 ## Configuration
 
 All settings come from environment variables or `.env` (see `.env.example`): API base URL and key, the fast
-and reasoning model IDs, ASR endpoint, thinking mode, temperature and `C2N_MAX_TOKENS`. Point `NIM_BASE_URL` at a self-hosted NIM, vLLM or any
+and reasoning model IDs, ASR endpoint, thinking mode, temperature and `C2N_MAX_TOKENS`. Point `NIM_BASE_URL` at a self-hosted vLLM or any
 OpenAI-compatible server to run without a hosted API.
 
 ## Project layout
@@ -264,16 +264,16 @@ src/consult_to_note/
   agent/graph.py         LangGraph state machine: extract, draft, ground, revise, safety, fhir, trials, finalize
   llm.py                 OpenAI-compatible client with guided JSON, LangChain adapter, scripted fake for tests
   grounding.py           two-stage grounding: deterministic checks, then LLM judge
-  asr.py                 Parakeet via Riva: chunking, word boosting, diarisation, two-channel merge
-  guard.py               PHI masking and output self-check (NeMo Guardrails)
+  asr.py                 speech recognition: chunking, word boosting, diarisation, two-channel merge
+  guard.py               PHI masking and output self-check (guardrails)
   fhir.py                FHIR R4 document bundle
   trials.py              ClinicalTrials.gov search and criterion-level pre-screen
   evaluation.py          ACI-Bench evaluation
   realtime/              live scribe, latency router, streaming ASR, serving benchmark
-  nat_plugin/            NeMo Agent Toolkit components
+  nat_plugin/            agent-toolkit components
   cli.py                 `c2n` command line
-configs/                 NeMo Agent Toolkit workflow and evaluation configs
-deploy/                  NIM docker compose, Dynamo launch scripts, benchmark targets
+configs/                 agent-toolkit workflow and evaluation configs
+deploy/                  model-server docker compose, distributed-serving launch scripts, benchmark targets
 scripts/                 data download, dataset builder
 tests/                   offline tests
 ```
